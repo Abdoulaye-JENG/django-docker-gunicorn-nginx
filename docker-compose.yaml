@@ -1,0 +1,49 @@
+version: "3.9"
+services:
+  postgres:
+        image: postgres:12
+        restart: always
+        container_name: postgresql
+        environment:
+          POSTGRES_PASSWORD: <DB_PASSWORD>
+          POSTGRES_USER: <DB_USER>
+          POSTGRES_DB: <DB_NAME>
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        ports:
+            - "5431:5432"
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: web:v0
+    container_name: web
+    restart: always
+    environment:
+      - PORT=8008
+    env_file:
+      - web/.env
+    ports:
+      - "8008:8008"
+    command: sh -c "chmod +x /app/migrate.sh && sh /app/migrate.sh && /app/entrypoint.sh"
+    volumes:
+      - staticfiles:/app/staticfiles/
+      - mediafiles:/home/app/web/mediafiles
+    depends_on:
+      - postgres
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    image: nginx:v0
+    container_name: nginx
+    volumes:
+      - staticfiles:/app/staticfiles/
+      - mediafiles:/home/app/web/mediafiles
+    ports:
+      - "8006:8006"
+    depends_on:
+      - web
+    restart: always
+volumes:
+  staticfiles:
